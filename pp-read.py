@@ -5,7 +5,7 @@ The pico w provides a json response with all readings from the Peacefair device
 
 This application provides a library for accessing this data
 """
-
+import sys
 import logging
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
@@ -15,15 +15,14 @@ import string
 import argparse
 
 log = logging.getLogger(__name__)
-logging.basicConfig(filename='wheater.log', encoding='utf-8', level=logging.WARN)
 
 def read_device(dev) :
     """ Reads power information from picow + peacefair power meter
     """
     req = Request(f'http://{dev}/data.json')
-    values = {}
+    values = None
     try:
-        with urlopen(req) as response :
+        with urlopen(req, timeout=1) as response :
             content_type = response.getheader('Content-type')
             if 'json' in content_type :
                 body = response.read()
@@ -46,6 +45,8 @@ def read_device(dev) :
         log.exception(f'{dev} disconnected before returning response')
 
     return values
+
+
 items = ['voltage','current','power','energy','frequency','powerFactor','powerAlarm','hostname','temperature']
 
 if __name__ == "__main__":
@@ -58,12 +59,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.item and args.item not in items:
-        print(f'{args.item} is not valid - select from:')
-        print(f' {items}')
-        exit()
+        exit(f'{args.item} is not valid - select from:\n {items}')
 
-    print(args)
+    logging.basicConfig(filename='pp-read.log', encoding='utf-8', level=logging.WARN)
+
     values = read_device(args.net_address)
+    if values is None:
+        sys.exit(f'unable to access device {args.net_address}')
 
     if args.dump:
         for i in values:
