@@ -13,6 +13,7 @@ import http
 import json
 import string
 import argparse
+import socket
 
 log = logging.getLogger(__name__)
 
@@ -43,9 +44,23 @@ def read_device(dev) :
         log.exception(f'Request to {dev} timed out')
     except http.client.RemoteDisconnected :
         log.exception(f'{dev} disconnected before returning response')
+    except socket.error as e:
+        log.exception(f'socket error {e}')
 
     return values
 
+import requests
+def read_dev(dev) :
+    try:
+        r = requests.get(f'http://{dev}/data.json')
+    except requests.exceptions.ConnectionError:
+        log.exception(f'Unable to connect to {dev}')
+        return None
+    try:
+        return r.json()
+    except requests.exceptions.JSONDecodeError:
+        log.exception(f'Unable to decode JSON data from {dev}')
+        return None
 
 items = ['voltage','current','power','energy','frequency','powerFactor','powerAlarm','hostname','temperature']
 
